@@ -1,7 +1,11 @@
 ##############################################################################
 ## Read in MA star rating data 
 ##############################################################################
-source("data-code/rating_variables.R")
+source("/Users/alekhyapidugu/Desktop/homework4/Submission1/data-code/rating_variables.R")
+
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggplot2, plyr, lubridate, stringr, readxl, data.table, gdata)
 
 ## Assign yearly datasets and clean star rating information
 
