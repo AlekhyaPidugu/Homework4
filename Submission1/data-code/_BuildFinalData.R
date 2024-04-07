@@ -9,7 +9,7 @@
 
 # Preliminaries -----------------------------------------------------------
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, ggplot2, plyr, lubridate, stringr, readxl, data.table, gdata)
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl, data.table, gdata)
 
 
 
@@ -51,7 +51,7 @@ final.data <- final.data %>%
                select(-contract_name, -org_type, -org_marketing), 
              by=c("contractid", "year")) %>%
   left_join( ma.penetration.data %>% ungroup() %>% select(-ssa) %>%
-               rename(state_long=state, county_long=county), 
+               rename(state_long= state, county_long= county), 
              by=c("fips", "year"))
 
 # calculate star rating (Part C rating if plan doesn't offer part D, otherwise Part D rating if available)
