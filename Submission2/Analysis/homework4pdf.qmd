@@ -1,0 +1,101 @@
+---
+Title: "Homework 4"
+Subtitle: "Submission 1"
+Author: "Alekhya Pidugu"
+format:
+  pdf:
+    output-file: "pidugu-a-hwk4-1"
+    output-ext:  "pdf"
+---
+# Git Repository: 
+
+```{r results="hide", echo=FALSE, message=FALSE}
+if (!require("pacman")) install.packages("pacman") 
+pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, readr, readxl, hrbrthemes, fixest,
+               scales, gganimate, gapminder, gifski, png, tufte, plotly, OECD,
+               ggrepel, survey, foreign, devtools, pdftools, kableExtra, modelsummary,
+               kableExtra, tinytex)
+
+
+
+
+```
+
+```{r}
+#| include: false
+#| eval: true
+ 
+load("/Users/alekhyapidugu/Desktop/homework4/Submission2/Analysis/Hwk4_workspace.Rdata")
+```
+
+\newpage
+
+# Question 1
+```{r results= "hide", echo=FALSE, message=FALSE}
+print(question1)
+
+```
+
+\newpage
+# Question 2
+```{r results= "hide", echo=FALSE, message=FALSE}
+ final.data <- read_rds("/Users/alekhyapidugu/Desktop/homework4/data/output/final_ma_data.rds")
+ filtered_data <- final.data %>%
+    filter(year %in% c(2010, 2012, 2015))
+
+# Create the bar plot
+question2 <- ggplot(filtered_data, aes(x = factor(Star_Rating), fill = factor(year))) +
+  geom_bar(position = "dodge", stat = "count") +
+  labs(x = "Star Rating", y = "Count", title = "Distribution of Star Ratings Over Time") +
+  scale_fill_manual(values = c("2010" = "pink", "2012" = "skyblue", "2015" = "purple")) +
+  theme_minimal()
+
+print(question2)
+```
+
+\newpage
+# Question 3
+```{r results= "hide", echo=FALSE, message=FALSE}
+filtered_data <- final.data %>%
+  filter(year >= 2010 & year <= 2015)
+
+# Group the data by year and calculate the average benchmark payment for each year
+average_benchmark_payments <- filtered_data %>%
+  group_by(year) %>%
+  summarize(average_benchmark_payment = mean(ma_rate, na.rm = TRUE))
+
+# Print or view the result
+print(average_benchmark_payments)
+
+# Plotting the average benchmark payments over time
+question3<- ggplot(average_benchmark_payments, aes(x = year, y = average_benchmark_payment)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average Benchmark Payment Over Time (2010-2015)",
+       x = "Year",
+       y = "Average Benchmark Payment") +
+  theme_minimal()
+
+question3
+
+```
+
+\newpage
+# Question 4
+```{r results= "hide", echo=FALSE, message=FALSE}
+q4 <- final.data %>% 
+  group_by(year)%>%
+  summarize(med_prop = sum(avg_enrollment, na.rm= TRUE)/ sum(avg_eligibles, na.rm = TRUE))
+
+  ggplot(q4, aes(x= year, y = med_prop))+
+  geom_line()
+```
+
+\newpage
+# Question 5
+```{r results= "hide", echo=FALSE, message=FALSE}
+#| echo: false
+#| label: fig-combined
+#| fig-cap: "Number of Plans Rounded Up"
+q5
+```

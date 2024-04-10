@@ -1,88 +1,81 @@
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, ggplot2, dplyr, lubridate, stringr, readxl, data.table, gdata)
 
-#QUESTION 1
-# Filter out SNPs, 800-series plans, and prescription drug only plans
-filtered_data <- final.data %>%
-  filter(!grepl("SNP", plan_name, ignore.case = TRUE) & 
-           !(planid >= 800 & planid < 900) &
-           partc_score == "Yes")
+final.data <- read_rds("data/output/final_ma_data.rds")
 
-# Convert year to factor for better visualization
-filtered_data$year <- as.factor(filtered_data$year)
+# Group data by county and year, and summarize plan counts
+final.plans <- final.data %>%
+  filter(snp == "No"  &
+           (planid < 800 | planid >= 900) &
+           partc_score > 0)
 
-# Create the box and whisker plot
-plot <- ggplot(filtered_data, aes(x = year, y = ..count.., fill = county)) +
-  geom_boxplot() +
+tot.obs <-  as.numeric(count(final.plans%>%ungroup()))
+
+plan_counts <- final.plans %>%
+ group_by(county, year) %>%
+ select(county,year) %>% 
+  summarize(plan_count = n())
+
+question1 <- ggplot(plan_counts, aes(x = as.factor(year), y = plan_count)) +
+  geom_boxplot(outlier.shape = NA) +
   labs(x = "Year", y = "Plan Count", title = "Distribution of Plan Counts by County Over Time") +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(axis.text.y = element_text(size = 8),   # Adjust the size of y-axis text
+        axis.title.y = element_text(size = 10)) + # Adjust the size of y-axis title
+  ylim(0, 75) 
 
-# Display the plot
-print(plot)
+question1
 
-#QUESTION 2
+
+#QUESTION 2 good
 # Filter the data for the years 2010, 2012, and 2015
-filtered_data <- final.data %>%
-  filter(year %in% c(2010, 2012, 2015))
+  filtered_data <- final.data %>%
+    filter(year %in% c(2010, 2012, 2015))
 
 # Create the bar plot
-bar_plot <- ggplot(filtered_data, aes(x = factor(Star_Rating), fill = factor(year))) +
+question2 <- ggplot(filtered_data, aes(x = factor(Star_Rating), fill = factor(year))) +
   geom_bar(position = "dodge", stat = "count") +
   labs(x = "Star Rating", y = "Count", title = "Distribution of Star Ratings Over Time") +
   scale_fill_manual(values = c("2010" = "pink", "2012" = "skyblue", "2015" = "purple")) +
   theme_minimal()
 
-# Display the plot
-print(bar_plot)
+print(question2)
 
-#QUESTION 3
+#QUESTION 3 good
 
-# Filter the data for the years 2010 through 2015
-filtered_benchmark <- benchmark.final %>%
+# Filter the data for years 2010 to 2015
+filtered_data <- final.data %>%
   filter(year >= 2010 & year <= 2015)
 
-# Group by year and calculate the average benchmark payment for each year
-average_payment <- filtered_benchmark %>%
+# Group the data by year and calculate the average benchmark payment for each year
+average_benchmark_payments <- filtered_data %>%
   group_by(year) %>%
-  summarize(avg_benchmark_payment = mean(risk_ab, na.rm = TRUE))
+  summarize(average_benchmark_payment = mean(ma_rate, na.rm = TRUE))
 
-# Calculate the change in average benchmark payment over the years
-change_in_payment <- diff(average_payment$avg_benchmark_payment)
+# Print or view the result
+print(average_benchmark_payments)
 
-# Create the line plot
-line_plot <- ggplot(average_payment, aes(x = year, y = avg_benchmark_payment)) +
+# Plotting the average benchmark payments over time
+question3<- ggplot(average_benchmark_payments, aes(x = year, y = average_benchmark_payment)) +
   geom_line() +
-  labs(x = "Year", y = "Average Benchmark Payment", 
-       title = "Average Benchmark Payment Over Time (2010-2015)") +
+  geom_point() +
+  labs(title = "Average Benchmark Payment Over Time (2010-2015)",
+       x = "Year",
+       y = "Average Benchmark Payment") +
   theme_minimal()
 
-# Display the plot
-print(line_plot)
+question3
 
-#QUESTION 4
-filtered_data <- final.data %>% filter(year >= 2010 & year <= 2015)
 
-# Calculate the total number of Medicare eligibles for each year
-total_eligibles <- filtered_data %>% group_by(year) %>% summarise(total_eligibles = sum(avg_eligibles, na.rm = TRUE))
+#QUESTION 4 good?
+q4 <- final.data %>% 
+  group_by(year)%>%
+  summarize(med_prop = sum(avg_enrollment, na.rm= TRUE)/ sum(avg_eligibles, na.rm = TRUE))
 
-# Calculate the total number of Medicare Advantage enrollees for each year
-total_ma_enrollees <- filtered_data %>% group_by(year) %>% summarise(total_ma_enrollees = sum(avg_enrolled, na.rm = TRUE))
+  ggplot(q4, aes(x= year, y = med_prop))+
+  geom_line()
 
-# Calculate the average share of Medicare Advantage enrollees relative to all Medicare eligibles for each year
-share_ma <- total_ma_enrollees$total_ma_enrollees / total_eligibles$total_eligibles
-
-# Plot the average share of Medicare Advantage over time
-plot(share_ma ~ total_eligibles$year, type = "o", 
-     xlab = "Year", ylab = "Average Share of Medicare Advantage",
-     main = "Average Share of Medicare Advantage Over Time (2010-2015)")
-
-# Add a trendline
-abline(lm(share_ma ~ total_eligibles$year), col = "red")
-
-str(full.ma.data)
-
-#Question 5 
+#Question 5  good?
 ma.data.clean <- final.data%>%
   filter(!is.na(avg_enrollment) & year==2010 & !is.na(partc_score))
 
@@ -112,10 +105,10 @@ ma.data.clean %>%
     title="Frequency Distribution of Star Ratings"
   ) + theme_bw()
 
-  ma.rd1 <- ma.data.clean %>%
-  filter(Star_Rating==3 | Star_Rating==3.5| Star_Rating==4| Star_Rating==4.5| Star_Rating==5)
+ma.rd1 <- ma.data.clean %>%
+  filter(Star_Rating==2 | Star_Rating==2.5)
 
-  ma.rd1 <- ma.rd1 %>%
+ma.rd1 <- ma.rd1 %>%
   mutate(score = raw_rating - 2.25,
          treat = (score>=0),
          window1 = (score>=-.175 & score<=.175),
@@ -135,16 +128,8 @@ est4 <- as.numeric(star25.4$coef[3])
 rows <- tribble(~term, ~ m1, ~ m2, ~ m3 , ~ m4,
                 'Bandwidth', "0.25", "0.175", "0.175", "0.125")
 attr(rows, 'position')  <- 7
-
-detach("package:data.table", unload = TRUE)
-
-# Install the required version of the data.table package
-install.packages("data.table")
-
-# Load the modelsummary package again
 library(modelsummary)
-
-modelsummary(list(star25.1, star25.2, star25.3, star25.4),
+q5 <- modelsummary(list(star25.1, star25.2, star25.3, star25.4),
           keep=c("score", "treatTRUE", "score_treat"),
           coef_map=c("score"="Raw Score", 
                     "treatTRUE"="Treatment",
@@ -152,42 +137,48 @@ modelsummary(list(star25.1, star25.2, star25.3, star25.4),
           gof_map=c("nobs", "r.squared"),
           add_rows=rows)
 
-#QUESTION 6
-# Filter the data for 2010 and ratings of 2 and 2.5 stars
-ma.rd1 <- ma.data.clean %>%
-  filter((Star_Rating == 2 | Star_Rating == 2.5))
+print(q5)
 
-# Create running variable, treatment indicator, and market share
-ma.rd1 <- ma.rd1 %>%
-  mutate(
-    score = raw_rating - 2.25,
-    treat = (score >= 0),
-    mkt_share = avg_enrollment / avg_eligibles
-  )
+#QUESTION 6 Good
+install.packages("rdrobust")
+library(rdrobust)
 
-# Fit linear regression model for 3-star rating
-star3_model <- lm(mkt_share ~ score + treat + score:treat, data = ma.rd1 %>% filter(score >= -0.125 & score <= 0.125))
+# Estimate the effect of receiving a 3-star versus a 2.5-star rating
+ma.rd3 <- ma.data.clean %>%
+  filter(Star_Rating==2.5 | Star_Rating==3) %>%
+  mutate(score = raw_rating - 3,
+         treat = (score>=0),
+         window1 = (score>=-.125 & score<=.125),
+         window2 = (score>=-.125 & score<=.125),
+         mkt_share = avg_enrollment/avg_eligibles,
+         ln_share = log(mkt_share),
+         score_treat=score*treat)
 
-# Extract coefficient for treat (3-star rating)
-effect_star3 <- coef(star3_model)["treatTRUE"]
+est3 <- rdrobust(y=ma.rd3$mkt_share, x=ma.rd3$score, c=0,
+                 h=0.125, p=1, kernel="uniform", vce="hc0",
+                 masspoints="off")
 
-# Fit linear regression model for 3.5-star rating
-star3.5_model <- lm(mkt_share ~ score + treat + score:treat, data = ma.rd1 %>% filter(score >= 0.125 & score <= 0.375))
+summary(est3)
 
-# Extract coefficient for treat (3.5-star rating)
-effect_star3.5 <- coef(star3.5_model)["treatTRUE"]
+# Estimate the effect of receiving a 3.5-star rating
+ma.rd35 <- ma.data.clean %>%
+  filter(Star_Rating==3 | Star_Rating==3.5) %>%
+  mutate(score = raw_rating - 3.5,
+         treat = (score>=0),
+         window1 = (score>=-.125 & score<=.125),
+         window2 = (score>=-.125 & score<=.125),
+         mkt_share = avg_enrollment/avg_eligibles,
+         ln_share = log(mkt_share),
+         score_treat=score*treat)
 
-# Summarize results in a table
-results_table <- data.frame(
-  Rating = c("3 stars", "3.5 stars"),
-  Effect = c(effect_star3, effect_star3.5)
-)
+est35 <- rdrobust(y=ma.rd35$mkt_share, x=ma.rd35$score, c=0,
+                  h=0.125, p=1, kernel="uniform", vce="hc0",
+                  masspoints="off")
 
-# Print results table
-print(results_table)
+summary(est35)
 
 
-#QUESTION 7 
+#QUESTION 7 FIXXXX
 # Function to estimate effect for a given bandwidth
 estimate_effect <- function(data, bandwidth, star_rating) {
   model <- lm(mkt_share ~ score + treat + score:treat, 
@@ -227,7 +218,7 @@ ggplot(melted_results, aes(x = Bandwidth, y = Effect, color = Star_Rating)) +
   ) +
   theme_minimal()
 
-#QUESTION 8
+#QUESTION 8 FIXXXXXX
 ggplot(data = ma.rd1, aes(x = score, fill = as.factor(window1))) +
   geom_density(alpha = 0.5) +
   facet_wrap(~ window1, scales = "free") +
@@ -238,7 +229,7 @@ ggplot(data = ma.rd1, aes(x = score, fill = as.factor(window1))) +
   ) +
   theme_minimal()
 
-#QUESTION 9
+#QUESTION 9 FIXXXXX
 ma.rd1 <- ma.rd1 %>%
   mutate(window1 = between(score, -0.175, 0.175))
 
@@ -278,3 +269,7 @@ comparison_plot <- compare_characteristics(
 
 # Show the comparison plot
 print(comparison_plot)
+
+
+rm(list=c("ma.data.clean"))
+save.image("/Users/alekhyapidugu/Desktop/homework4/Submission2/Analysis/Hwk4_workspace.Rdata")
